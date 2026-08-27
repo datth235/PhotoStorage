@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0e0e10" />
     <title>Thư viện ảnh — Lưu trữ & chia sẻ</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231bb76e'/%3E%3Ctext y='72' x='50' font-size='60' text-anchor='middle'%3E%F0%9F%96%BC%3C/text%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="/css/style.css?v=13" />
+    <link rel="stylesheet" href="/css/style.css?v=15" />
   </head>
   <body>
     <header class="site-header">
@@ -48,6 +48,17 @@
         <span class="count" id="count"></span>
       </div>
 
+      <!-- Kỷ niệm: album ảnh có tên (con của Thư viện ảnh) -->
+      <section class="mem-section" id="memSection" hidden>
+        <div class="sub-head">
+          <h3>📔 Kỷ niệm</h3>
+          <span class="count" id="memCount"></span>
+        </div>
+        <div class="memories" id="memories"></div>
+      </section>
+
+      <div class="sub-head" id="loosePhotosHead" hidden><h3>🗂️ Ảnh lẻ</h3></div>
+
       <div id="galleryHost">
         <div class="state" id="loadingState">
           <div class="icon">⏳</div>
@@ -81,10 +92,48 @@
       </div>
     </div>
 
+    <!-- Hộp tạo / sửa kỷ niệm -->
+    <div class="mem-modal hidden" id="memModal" aria-hidden="true">
+      <div class="mem-dialog">
+        <button class="mem-close" id="memModalClose" type="button" aria-label="Đóng">✕</button>
+        <h3 id="memModalTitle">Tạo kỷ niệm</h3>
+        <input type="text" id="memName" placeholder="Tên kỷ niệm (vd: Đà Lạt tháng 2)" maxlength="80" />
+        <div class="dropzone" id="memDrop">
+          <div class="icon">🖼️</div>
+          <div class="big">Chạm để chọn ảnh</div>
+          <div class="small">chọn nhiều ảnh cho kỷ niệm này</div>
+          <input type="file" id="memFiles" accept="image/*" multiple hidden />
+        </div>
+        <div class="preview-strip" id="memPreview"></div>
+        <div class="progress hidden" id="memProgress"><span></span></div>
+        <div class="mem-dialog-actions">
+          <button class="btn btn-primary" id="memSubmit" type="button" disabled>Tạo kỷ niệm</button>
+          <button class="btn btn-ghost" id="memCancel" type="button">Huỷ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Xem 1 kỷ niệm -->
+    <div class="mem-view hidden" id="memView" aria-hidden="true">
+      <div class="mem-view-inner">
+        <div class="mem-view-head">
+          <button class="mem-close" id="memViewClose" type="button" aria-label="Đóng">✕</button>
+          <h3 id="memViewName"></h3>
+          <span class="count" id="memViewCount"></span>
+          <div class="mem-view-actions">
+            <button class="btn btn-sm" id="memAddMore" type="button">＋ Thêm ảnh</button>
+            <button class="btn btn-sm btn-danger" id="memDelete" type="button">Xoá kỷ niệm</button>
+          </div>
+        </div>
+        <div class="gallery" id="memViewGrid"></div>
+      </div>
+    </div>
+
     <div class="toast-wrap" id="toastWrap"></div>
 
-    <script src="/js/common.js?v=10"></script>
-    <script src="/js/couple.js?v=13"></script>
-    <script src="/js/app.js?v=10"></script>
+    <script src="/js/common.js?v=14"></script>
+    <script src="/js/couple.js?v=15"></script>
+    <script src="/js/app.js?v=14"></script>
+    <script src="/js/memories.js?v=14"></script>
   </body>
 </html>

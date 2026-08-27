@@ -25,6 +25,8 @@ function renderCouple(r) {
 
   if (r.partner) {
     cpEl.className = "couple together";
+    // Chỉ linhxinhgai mới bấm được "Chia tay"; anhdatdeptrai thì nút bị làm mờ.
+    const canBreakup = r.me !== "anhdatdeptrai";
     cpEl.innerHTML = `
       <div class="couple-head">
         <span class="couple-emoji">💞</span>
@@ -33,8 +35,12 @@ function renderCouple(r) {
           <div class="couple-sub">Hai bạn đang dùng chung một thư viện ảnh · từ ${timeAgo(r.since)}</div>
         </div>
       </div>
-      <button class="btn btn-sm btn-danger" id="cpBreakup" type="button">Chia tay</button>`;
-    cpEl.querySelector("#cpBreakup").addEventListener("click", askBreakup);
+      <button class="btn btn-sm btn-danger" id="cpBreakup" type="button" ${
+        canBreakup ? "" : 'disabled title="Anh không được phép chia tay đâu 🥺"'
+      }>Chia tay</button>`;
+    if (canBreakup) {
+      cpEl.querySelector("#cpBreakup").addEventListener("click", askBreakup);
+    }
     return;
   }
 

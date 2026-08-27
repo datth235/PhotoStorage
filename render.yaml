@@ -10,14 +10,24 @@ services:
         value: 20.18.0
       - key: SESSION_SECRET
         generateValue: true
-      # Tuỳ chọn: đổi tài khoản đăng nhập
+
+      # Metadata (danh sách ảnh / kỷ niệm / hẹn hò) -> MongoDB Atlas (free).
+      # Điền giá trị trong Dashboard Render (Environment). sync:false = không lưu vào file này.
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: thuvien_anh
+
+      # File ảnh gốc + thumbnail -> Cloudinary (free).
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: thuvien-anh
+
+      # Tuỳ chọn: đổi / thêm tài khoản đăng nhập
       # - key: USERS
       #   value: '{"admin":"matkhaumanh"}'
 
-    # LƯU Ý: gói "free" của Render KHÔNG có ổ đĩa bền.
-    # Mỗi lần deploy lại / service ngủ dậy => ảnh đã upload và data/images.json sẽ MẤT.
-    # Muốn giữ ảnh vĩnh viễn, bỏ comment phần dưới (Render sẽ chuyển service sang gói có phí ~7$/tháng):
-    # disk:
-    #   name: data
-    #   mountPath: /opt/render/project/src/uploads
-    #   sizeGB: 1
+    # Không cần ổ đĩa bền nữa: ảnh nằm ở Cloudinary, metadata ở MongoDB Atlas.
+    # (Nếu KHÔNG đặt MONGODB_URI / CLOUDINARY_URL thì web chạy chế độ cục bộ và
+    #  sẽ mất dữ liệu mỗi lần Render deploy lại — chỉ nên dùng khi chạy máy cá nhân.)
