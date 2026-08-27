@@ -35,6 +35,7 @@ const MAX_FILE_MB = 25;
 const USERS = {
   admin: 'admin',
   linhxinhgai: 'yeubelinh',
+  anhdatdeptrai: 'yeuembelinh',
 };
 // Tuỳ chọn: ghi đè / bổ sung qua biến môi trường, ví dụ
 //   $env:USERS='{"sep":"matkhaumanh","linh":"123456"}'
@@ -51,12 +52,28 @@ const THUMB_DIR = path.join(UPLOAD_DIR, 'thumb');
 const MED_DIR = path.join(UPLOAD_DIR, 'med');
 const DATA_DIR = path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'images.json');
+const REL_FILE = path.join(DATA_DIR, 'relationships.json');
 
 /* ---------- Chuẩn bị thư mục & "database" ---------- */
 for (const dir of [UPLOAD_DIR, THUMB_DIR, MED_DIR, DATA_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, '[]');
+
+/* ---------- Cặp đôi mặc định ----------
+   Web này chỉ có 2 người dùng. Ghép đôi sẵn để sau mỗi lần deploy lại
+   (Render gói free xoá thư mục data/) vẫn giữ nguyên tình trạng hẹn hò.   */
+const DEFAULT_COUPLE = {
+  id: 'c_datlinh',
+  members: ['anhdatdeptrai', 'linhxinhgai'],
+  since: new Date('2026-02-01T00:00:00+07:00').getTime(),
+};
+if (!fs.existsSync(REL_FILE)) {
+  fs.writeFileSync(
+    REL_FILE,
+    JSON.stringify({ requests: [], couples: [DEFAULT_COUPLE] }, null, 2)
+  );
+}
 
 function readDB() {
   try {
@@ -67,6 +84,43 @@ function readDB() {
 }
 function writeDB(items) {
   fs.writeFileSync(DB_FILE, JSON.stringify(items, null, 2));
+}
+
+/* ---------- "Hẹn hò": ghép đôi 2 tài khoản để dùng chung 1 thư viện ---------- */
+function readRel() {
+  try {
+    const r = JSON.parse(fs.readFileSync(REL_FILE, 'utf8'));
+    return { requests: Array.isArray(r.requests) ? r.requests : [], couples: Array.isArray(r.couples) ? r.couples : [] };
+  } catch {
+    return { requests: [], couples: [] };
+  }
+}
+function writeRel(r) {
+  fs.writeFileSync(REL_FILE, JSON.stringify(r, null, 2));
+}
+
+/** Trả về cặp đôi (couple) mà user đang thuộc về, hoặc null nếu đang độc thân */
+function coupleOf(user) {
+  return readRel().couples.find((c) => c.members.includes(user)) || null;
+}
+
+/** "Phạm vi" thư viện của user: id cặp đôi nếu đang hẹn hò, ngược lại là tên đăng nhập */
+function scopeOf(user) {
+  const c = coupleOf(user);
+  return c ? c.id : user;
+}
+
+/** Đổi phạm vi cho toàn bộ ảnh khớp điều kiện */
+function rescopeImages(match, newScope) {
+  const db = readDB();
+  let changed = false;
+  for (const img of db) {
+    if (match(img)) {
+      img.scope = newScope;
+      changed = true;
+    }
+  }
+  if (changed) writeDB(db);
 }
 
 /* ---------- Multer: nhận file ảnh ---------- */
@@ -225,7 +279,10 @@ app.get('/api/me', (req, res) => {
 
 /* ---------- API: ảnh (đều cần đăng nhập) ---------- */
 app.get('/api/images', requireAuth, (req, res) => {
-  const all = readDB().sort((a, b) => b.uploadedAt - a.uploadedAt);
+  const scope = scopeOf(req.session.user);
+  const all = readDB()
+    .filter((x) => (x.scope || x.owner) === scope)
+    .sort((a, b) => b.uploadedAt - a.uploadedAt);
   const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
   const items = all.slice(offset, offset + limit);
@@ -235,7 +292,8 @@ app.get('/api/images', requireAuth, (req, res) => {
 
 app.get('/api/images/:id', requireAuth, (req, res) => {
   const item = readDB().find((x) => x.id === req.params.id);
-  if (!item) return res.status(404).json({ error: 'Không tìm thấy ảnh.' });
+  if (!item || (item.scope || item.owner) !== scopeOf(req.session.user))
+    return res.status(404).json({ error: 'Không tìm thấy ảnh.' });
   res.json(item);
 });
 
@@ -246,6 +304,8 @@ app.post('/api/upload', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Chưa chọn file ảnh nào.' });
 
     const title = (req.body.title || '').trim();
+    const owner = req.session.user;
+    const scope = scopeOf(owner);
     const added = [];
     for (const f of req.files) {
       const id = path.parse(f.filename).name;
@@ -255,6 +315,8 @@ app.post('/api/upload', requireAuth, (req, res) => {
         filename: f.filename,
         originalName: f.originalname,
         title: title || f.originalname,
+        owner,
+        scope,
         size: f.size,
         mimetype: f.mimetype,
         url: `/uploads/${f.filename}`,
@@ -276,7 +338,8 @@ app.post('/api/upload', requireAuth, (req, res) => {
 app.delete('/api/images/:id', requireAuth, (req, res) => {
   const db = readDB();
   const idx = db.findIndex((x) => x.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy ảnh.' });
+  if (idx === -1 || (db[idx].scope || db[idx].owner) !== scopeOf(req.session.user))
+    return res.status(404).json({ error: 'Không tìm thấy ảnh.' });
   const [removed] = db.splice(idx, 1);
   writeDB(db);
 
@@ -284,6 +347,114 @@ app.delete('/api/images/:id', requireAuth, (req, res) => {
   unlink(path.join(UPLOAD_DIR, removed.filename));
   unlink(path.join(THUMB_DIR, removed.id + '.webp'));
   unlink(path.join(MED_DIR, removed.id + '.webp'));
+
+  res.json({ ok: true });
+});
+
+/* ---------- API: hẹn hò (cần đăng nhập) ---------- */
+
+/** Tình trạng hẹn hò của tài khoản đang đăng nhập */
+app.get('/api/relationship', requireAuth, (req, res) => {
+  const me = req.session.user;
+  const rel = readRel();
+  const couple = rel.couples.find((c) => c.members.includes(me)) || null;
+  const partner = couple ? couple.members.find((m) => m !== me) : null;
+
+  res.json({
+    me,
+    partner,
+    since: couple ? couple.since : null,
+    incoming: rel.requests.filter((r) => r.to === me).map((r) => r.from),
+    outgoing: rel.requests.filter((r) => r.from === me).map((r) => r.to),
+    candidates: Object.keys(USERS).filter((u) => u !== me),
+  });
+});
+
+/** Gửi lời mời hẹn hò tới `to` */
+app.post('/api/relationship/request', requireAuth, (req, res) => {
+  const me = req.session.user;
+  const to = (req.body && req.body.to || '').trim();
+
+  if (!Object.hasOwn(USERS, to)) return res.status(400).json({ error: 'Không có tài khoản này.' });
+  if (to === me) return res.status(400).json({ error: 'Không thể tự hẹn hò với chính mình 😅.' });
+
+  const rel = readRel();
+  if (rel.couples.some((c) => c.members.includes(me)))
+    return res.status(400).json({ error: 'Bạn đang hẹn hò rồi. Hãy chia tay trước đã.' });
+  if (rel.couples.some((c) => c.members.includes(to)))
+    return res.status(400).json({ error: `${to} đang hẹn hò với người khác rồi.` });
+
+  // Nếu đối phương đã mời mình từ trước -> ghép đôi luôn
+  const reverse = rel.requests.find((r) => r.from === to && r.to === me);
+  if (reverse) return acceptRequest(rel, to, me, res);
+
+  if (rel.requests.some((r) => r.from === me && r.to === to))
+    return res.status(400).json({ error: 'Đã gửi lời mời cho người này rồi.' });
+
+  rel.requests.push({ from: me, to, at: Date.now() });
+  writeRel(rel);
+  res.json({ ok: true, status: 'requested' });
+});
+
+/** Chấp nhận lời mời từ `from` */
+app.post('/api/relationship/accept', requireAuth, (req, res) => {
+  const me = req.session.user;
+  const from = (req.body && req.body.from || '').trim();
+  const rel = readRel();
+
+  if (!rel.requests.some((r) => r.from === from && r.to === me))
+    return res.status(400).json({ error: 'Không tìm thấy lời mời này.' });
+  if (rel.couples.some((c) => c.members.includes(me) || c.members.includes(from)))
+    return res.status(400).json({ error: 'Một trong hai người đang hẹn hò rồi.' });
+
+  acceptRequest(rel, from, me, res);
+});
+
+function acceptRequest(rel, a, b, res) {
+  const id = 'c_' + crypto.randomBytes(6).toString('hex');
+  rel.couples.push({ id, members: [a, b], since: Date.now() });
+  // Xoá mọi lời mời liên quan tới 1 trong 2 người
+  rel.requests = rel.requests.filter((r) => ![a, b].includes(r.from) && ![a, b].includes(r.to));
+  writeRel(rel);
+
+  // Gộp thư viện: mọi ảnh của cả hai chuyển sang phạm vi chung của cặp đôi
+  rescopeImages((img) => [a, b].includes(img.owner || img.scope), id);
+
+  res.json({ ok: true, status: 'together' });
+}
+
+/** Huỷ lời mời mình đã gửi / từ chối lời mời người khác gửi */
+app.post('/api/relationship/decline', requireAuth, (req, res) => {
+  const me = req.session.user;
+  const other = (req.body && req.body.user || '').trim();
+  const rel = readRel();
+  rel.requests = rel.requests.filter(
+    (r) => !((r.from === me && r.to === other) || (r.from === other && r.to === me))
+  );
+  writeRel(rel);
+  res.json({ ok: true });
+});
+
+/** Chia tay: tách thư viện, ảnh trả về cho người đã tải lên */
+app.post('/api/relationship/breakup', requireAuth, (req, res) => {
+  const me = req.session.user;
+  const rel = readRel();
+  const idx = rel.couples.findIndex((c) => c.members.includes(me));
+  if (idx === -1) return res.status(400).json({ error: 'Bạn đang không hẹn hò với ai.' });
+
+  const [couple] = rel.couples.splice(idx, 1);
+  writeRel(rel);
+
+  // Ảnh trong phạm vi cặp đôi -> trả lại theo chủ sở hữu (người tải lên)
+  const db = readDB();
+  let changed = false;
+  for (const img of db) {
+    if (img.scope === couple.id) {
+      img.scope = img.owner || couple.members[0];
+      changed = true;
+    }
+  }
+  if (changed) writeDB(db);
 
   res.json({ ok: true });
 });

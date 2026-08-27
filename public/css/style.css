@@ -690,7 +690,7 @@ body.modal-open {
   bottom: 4%;
 }
 .deco-gif-2 {
-  /* mèo khóc — góc dưới phải */
+  /* mèo hôn — góc dưới phải */
   width: clamp(92px, 23vw, 126px);
   right: 3%;
   bottom: 4%;
@@ -770,7 +770,7 @@ body.modal-open {
     opacity: 0.95;
   }
   .deco-gif-2 {
-    /* mèo khóc: dịch vào trong vài px cho khỏi lẹm mép phải */
+    /* mèo hôn: dịch vào trong vài px cho khỏi lẹm mép phải */
     width: 82px;
     right: 2%;
     bottom: 2%;
@@ -912,4 +912,116 @@ body.modal-open {
   border-radius: var(--radius);
   padding: 16px 18px;
   margin-top: 16px;
+}
+
+/* ---------- Hẹn hò (ghép đôi thư viện) ---------- */
+.couple {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.couple.together {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(27, 183, 110, 0.12), transparent);
+}
+.couple-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.couple-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+.couple-title {
+  font-weight: 600;
+}
+.couple-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.couple-req {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.couple-req-btns {
+  display: flex;
+  gap: 6px;
+}
+.couple-invite {
+  display: flex;
+  gap: 8px;
+}
+.couple-invite input {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: inherit;
+  padding: 8px 10px;
+  font: inherit;
+}
+.couple-invite input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Hộp xác nhận "chia tay" */
+.cp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.cp-modal {
+  width: min(340px, 100%);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.cp-modal-q {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+.cp-modal-final {
+  color: #ff9db4;
+}
+.cp-modal-btns {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+.cp-modal-btns .btn {
+  min-width: 88px;
+}
+#cpYes {
+  transform-origin: center;
 }
