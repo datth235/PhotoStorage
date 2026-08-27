@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: photostorage
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: SESSION_SECRET
+        generateValue: true
+      # Tuỳ chọn: đổi tài khoản đăng nhập
+      # - key: USERS
+      #   value: '{"admin":"matkhaumanh"}'
+
+    # LƯU Ý: gói "free" của Render KHÔNG có ổ đĩa bền.
+    # Mỗi lần deploy lại / service ngủ dậy => ảnh đã upload và data/images.json sẽ MẤT.
+    # Muốn giữ ảnh vĩnh viễn, bỏ comment phần dưới (Render sẽ chuyển service sang gói có phí ~7$/tháng):
+    # disk:
+    #   name: data
+    #   mountPath: /opt/render/project/src/uploads
+    #   sizeGB: 1
